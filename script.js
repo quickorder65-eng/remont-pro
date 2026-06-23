@@ -296,7 +296,16 @@ async function sendChatMessage() {
 
     hideChatTyping();
 
-    if (!res.ok) throw new Error('API ' + res.status);
+    if (!res.ok) {
+      let errDetail = 'HTTP ' + res.status;
+      try {
+        const errData = await res.json();
+        errDetail = errData.detail || errData.error || errDetail;
+      } catch {}
+      console.error('[Chat] API error:', errDetail);
+      addChatMsg('Ошибка: ' + errDetail, 'bot');
+      return;
+    }
 
     const data = await res.json();
     const reply = data.reply || '';
@@ -312,9 +321,14 @@ async function sendChatMessage() {
     if (isLeadConfirmed && !chatLeadSaved && chatLeadData.phone) {
       saveChatLead();
     }
-  } catch {
+  } catch (err) {
     hideChatTyping();
-    addChatMsg('Ассистент временно недоступен. Оставьте телефон, и менеджер свяжется с вами.', 'bot');
+    console.error('[Chat] Fetch error:', err);
+    // /api/chat недоступен — скорее всего локальный запуск без сервера
+    const msg = err.message && err.message !== 'Failed to fetch'
+      ? 'Ошибка: ' + err.message
+      : 'Ассистент временно недоступен. Оставьте телефон, и менеджер свяжется с вами.';
+    addChatMsg(msg, 'bot');
   } finally {
     chatSending = false;
     document.getElementById('chatSend').disabled = false;
