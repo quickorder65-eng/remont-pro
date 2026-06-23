@@ -7,9 +7,15 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Server misconfiguration' });
+  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not set in environment variables' });
 
-  const body = req.body || {};
+  // Vercel may pass body as string — parse manually if needed
+  let body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch { body = {}; }
+  }
+  body = body || {};
+
   const message = (body.message || '').toString().trim();
   const history = Array.isArray(body.history) ? body.history : [];
 
@@ -19,7 +25,6 @@ module.exports = async function handler(req, res) {
 
 Ценовые ориентиры (тг/м²): косметический — 60 000, стандарт — 90 000, под ключ — 130 000, премиум — 180 000. При запросе цены давай диапазон ±15% и указывай: "Предварительная стоимость: от [сумма] до [сумма] тг. Точная сумма зависит от состояния объекта, материалов и замера."`;
 
-  // Keep last 10 turns to stay within token limits
   const trimmedHistory = history
     .filter(m => m.role && Array.isArray(m.parts) && m.parts[0]?.text)
     .slice(-20);
@@ -31,7 +36,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,19 +48,29 @@ module.exports = async function handler(req, res) {
       }
     );
 
+    const rawText = await geminiRes.text();
+
     if (!geminiRes.ok) {
-      console.error('Gemini error:', geminiRes.status, await geminiRes.text());
-      return res.status(502).json({ error: 'Gemini API unavailable' });
+      console.error('Gemini error:', geminiRes.status, rawText);
+      // Return actual Gemini error so it's visible in Vercel logs and response
+      return res.status(502).json({
+        error: 'Gemini API error',
+        status: geminiRes.status,
+        detail: rawText.slice(0, 500)
+      });
     }
 
-    const data = await geminiRes.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    let data;
+    try { data = JSON.parse(rawText); } catch {
+      return res.status(502).json({ error: 'Invalid JSON from Gemini', raw: rawText.slice(0, 200) });
+    }
 
-    if (!reply) return res.status(502).json({ error: 'Empty Gemini response' });
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    if (!reply) return res.status(502).json({ error: 'Empty Gemini response', data });
 
     return res.status(200).json({ reply });
   } catch (err) {
     console.error('Chat handler error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 };
