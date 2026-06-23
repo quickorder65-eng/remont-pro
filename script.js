@@ -2,11 +2,6 @@
    REMONT DEMO — script.js
    ═══════════════════════════════════════════ */
 
-// ─── CONFIG ───────────────────────────────
-const GOOGLE_SCRIPT_URL = 'ВСТАВЬТЕ_URL_APPS_SCRIPT_СЮДА';
-// После деплоя Apps Script вставьте Web App URL выше.
-// Пример: 'https://script.google.com/macros/s/AKfycb.../exec'
-
 // ─── NAV scroll ───────────────────────────
 (function () {
   const nav = document.getElementById('nav');
@@ -376,6 +371,20 @@ function saveChatLead() {
     now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
   chatLeadData.calendarUrl = makeCalendarUrl(chatLeadData.name, chatLeadData.phone);
+
+  // Отправить в Google Sheets + авто-создать событие в Google Calendar
+  if (typeof sendLead === 'function') {
+    sendLead({
+      name:          chatLeadData.name || '',
+      phone:         chatLeadData.phone || '',
+      objectType:    '',
+      area:          '',
+      repairType:    '',
+      designProject: '',
+      startTime:     '',
+      source:        'ИИ-чат'
+    });
+  }
 
   addCrmRow({
     date: dateStr,
