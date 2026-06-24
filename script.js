@@ -372,6 +372,20 @@ function saveChatLead() {
 
   chatLeadData.calendarUrl = makeCalendarUrl(chatLeadData.name, chatLeadData.phone);
 
+  // Telegram-уведомление через Vercel (без Apps Script)
+  fetch('/api/notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name:       chatLeadData.name  || '',
+      phone:      chatLeadData.phone || '',
+      source:     'ИИ-чат',
+      objectType: chatLeadData.objectType  || '',
+      area:       chatLeadData.area        || '',
+      repairType: chatLeadData.repairType  || ''
+    })
+  }).catch(() => {}); // silent — уведомление не должно блокировать UX
+
   // Отправить в Google Sheets + авто-создать событие в Google Calendar
   if (typeof sendLead === 'function') {
     sendLead({

@@ -3,7 +3,7 @@
    Единственное место для URL и логики отправки
    ═══════════════════════════════════════════ */
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyVH3C600PvZHiUTAMEX_c-2Fw1cgWx-UJ4uJZjmbLSDCBpQfY-Z_tYZ5aE1WQzDP0N/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJFmIZVzMWa86yVw8zi07WZzJeJwMideAW5hMSDuAC36wdzDTc1S60-aLF8HwLfP-G/exec';
 // Пример: 'https://script.google.com/macros/s/AKfycb.../exec'
 
 /**
